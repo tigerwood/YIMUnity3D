@@ -134,8 +134,20 @@ namespace YouMe
             JoinMultiChannel(channel);
         }
 
-        public TextMessage SendTextMessage(string reciverID,ChatType chatType, string msgContent ,Action<ErrorCode,IMMessage> onSendCallBack){
-            return null;
+        public TextMessage SendTextMessage(string reciverID,ChatType chatType, string msgContent ,Action<ErrorCode,TextMessage> onSendCallBack){
+            ulong reqID = 0;
+            YIMEngine.ErrorCode code = 0;
+            code = IMAPI.Instance().SendTextMessage(reciverID, (YIMEngine.ChatType)chatType, msgContent, ref reqID);
+            var msg = new TextMessage(reciverID,chatType,msgContent,true);
+            if(code == YIMEngine.ErrorCode.Success){
+                msg.sendStatus = SendStatus.Sending;
+            }else{
+                msg.sendStatus = SendStatus.Fail;
+                if(onSendCallBack!=null){
+                    onSendCallBack(Conv.ErrorCodeConvert(code),msg);
+                }
+            }
+            return msg;
         }
 
         /**
@@ -150,7 +162,7 @@ namespace YouMe
                 code = IMAPI.Instance().SendOnlyAudioMessage(reciverID, (YIMEngine.ChatType)chatType, ref reqID);
             }
             if(code == YIMEngine.ErrorCode.Success){
-                var msg = new AudioMessage(reciverID,chatType,extraMsg,recognizeText);
+                var msg = new AudioMessage(reciverID,chatType,extraMsg,recognizeText,true);
                 return msg;
             }
             Log.e("StartRecordAudio fail error:"+code.ToString());

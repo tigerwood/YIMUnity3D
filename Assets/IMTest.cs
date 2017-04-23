@@ -39,7 +39,7 @@ public class IMTest : MonoBehaviour {
 	}
 
 	void SendTextMessage(){
-        TextMessage msg = IMClient.Instance.SendTextMessage("userid", ChatType.Private, "hello cat");
+        // TextMessage msg = IMClient.Instance.SendTextMessage("userid", ChatType.Private, "hello cat");
     }
 
 	void OnReceiveMessage(IMMessage msg){
@@ -56,11 +56,11 @@ public class IMTest : MonoBehaviour {
 
 
     public void StartRecord(){
-        IMClient.Instance.StartRecordAudio("userid",ChatType.Private);
+        // IMClient.Instance.StartRecordAudio("userid",ChatType.Private);
     }
 
     public void StopRecordAndSend(){
-        IMClient.Instance.StopRecordAndSendAudio("");
+        // IMClient.Instance.StopRecordAndSendAudio("");
     }
     
 

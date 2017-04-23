@@ -3,6 +3,10 @@ using YouMe;
 
 public class IMMessage{
     public MessageType messageType;
+    public string reciverID;
+    public ChatType chatType;
+    public bool isSelfSend;
+    public SendStatus sendStatus;
 }
 
 public enum MessageDownloadStatus{
@@ -15,22 +19,33 @@ public enum ChatType{
     RoomChat = 2,
 }
 
+public enum SendStatus{
+    NotStartSend = 0,
+    Sending = 1,
+    Sended = 2,
+    Fail = 3,
+}
+
 public class AudioMessage:IMMessage{
 
-    public string reciverID;
-    public ChatType chatType;
-
-    public MessageDownloadStatus status;
+    public MessageDownloadStatus downloadStatus;
     public bool isRecorgnizeText;
     public string filePath;
     public string recognizedText;
     public string extraParam;
 
-    public AudioMessage(string reciverID,ChatType chatType,string extraParam,bool isRecorgnizeText ){
+    public AudioMessage(string reciverID,ChatType chatType,string extraParam,bool isRecorgnizeText,bool isSelfSend){
+        this.messageType = MessageType.AUDIO;
         this.reciverID = reciverID;
         this.chatType = chatType;
         this.extraParam = extraParam;
         this.isRecorgnizeText = isRecorgnizeText;
+        this.isSelfSend = isSelfSend;
+        if(isSelfSend){
+            sendStatus = SendStatus.NotStartSend;
+        }else{
+            sendStatus = SendStatus.Sended;
+        }
     }
 
     public void PlayAudio(){}
@@ -48,7 +63,16 @@ public class AudioMessage:IMMessage{
 public class TextMessage:IMMessage{
     public string content;
 
-    public TextMessage(string reciver,ChatType chatType,string content){
+    public TextMessage(string reciver,ChatType chatType,string content,bool isSelfSend){
+         this.messageType = MessageType.TEXT;
+        this.reciverID = reciver;
+        this.chatType = chatType;
         this.content = content;
+        this.isSelfSend = isSelfSend;
+        if(isSelfSend){
+            sendStatus = SendStatus.NotStartSend;
+        }else{
+            sendStatus = SendStatus.Sended;
+        }
     }
 }
