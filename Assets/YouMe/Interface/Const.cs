@@ -38,7 +38,9 @@ namespace YouMe
         SUCCESS,
         NET_ERROR,
         SECRETKEY_ERROR,
-        STATUS_ERROR
+        STATUS_ERROR,
+
+        START_DOWNLOAD_FAIL
     }
 
     public enum MessageType

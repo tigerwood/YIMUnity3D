@@ -33,6 +33,30 @@ public class IMInternaelManager:
         }
     }
 
+    private Dictionary<ulong, MessageCallbackObject> messageCallbackQueue = new Dictionary<ulong, MessageCallbackObject>(10);
+    private Dictionary<ulong, Action<YouMe.ErrorCode , string >> downloadCallbackQueue = new Dictionary<ulong, Action<YouMe.ErrorCode , string >>(10);
+
+    public bool AddMessageCallback(ulong reqID,MessageCallbackObject callback){
+        if (messageCallbackQueue.ContainsKey(reqID))
+        {
+            messageCallbackQueue.Add(reqID, callback);
+        }else{
+            Log.e("message id is already in sending queue.");
+            return false;
+        }
+        return true;
+    }
+
+    public bool AddDownloadCallback(ulong reqID,Action<YouMe.ErrorCode , string > callback){
+        if(!downloadCallbackQueue.ContainsKey(reqID)){
+            downloadCallbackQueue.Add(reqID, callback);
+        }else{
+            Log.e("file already in download queue.");
+            return false;
+        }
+        return true;
+    }
+
     private IMInternaelManager(){
         var youmeObj = new GameObject("__YIMGameObjectV2__");
         GameObject.DontDestroyOnLoad(youmeObj);
@@ -103,21 +127,121 @@ public class IMInternaelManager:
 
     public void OnSendMessageStatus(ulong iRequestID, YIMEngine.ErrorCode errorcode)
     {
-        
+        MessageCallbackObject callbackObj=null;
+        bool finded = messageCallbackQueue.TryGetValue(iRequestID, out callbackObj);
+        if( finded ){
+            if( callbackObj != null && callbackObj.callback != null ){
+                try{
+                    switch(callbackObj.msgType){
+                        case MessageType.TEXT:
+                            Action<YouMe.ErrorCode, TextMessage> call = (Action<YouMe.ErrorCode, TextMessage>)callbackObj.callback;
+                            var msg = (TextMessage)callbackObj.message;
+                            msg.sendTime = TimeUtil.ConvertToTimestamp(System.DateTime.Now);
+                            if (errorcode == YIMEngine.ErrorCode.Success)
+                            {
+                                msg.sendStatus = SendStatus.Sended;
+                            }else{
+                                msg.sendStatus = SendStatus.Fail;
+                            }
+                            msg.isReceiveFromServer = false;
+                            call(Conv.ErrorCodeConvert(errorcode),msg);
+                            break;
+                        default:
+                            break;
+                    }
+                }catch(Exception e){
+                    Log.e(e.ToString());
+                }
+            }
+            messageCallbackQueue.Remove(iRequestID);
+        }
     }
 
     public void OnRecvMessage(MessageInfoBase message)
     {
-       
+        if ( IMClient.Instance.ReceiveMessageListener != null )
+        {
+            IMMessage messageObj=null;
+            switch (message.MessageType)
+            {
+                case MessageBodyType.TXT:
+                    {
+                        var txtMsg = (YIMEngine.TextMessage)message;
+                        var msg = new TextMessage(message.SenderID,message.RecvID, (ChatType)message.ChatType, txtMsg.Content, true);
+                        msg.sendTime = (uint)message.CreateTime;
+                        msg.sendStatus = SendStatus.Sended;
+                        messageObj = msg;
+                    }
+                    break;
+                case MessageBodyType.Voice:
+                    {
+                        var voiceMsg = (YIMEngine.VoiceMessage)message;
+                        var msg = new AudioMessage(message.SenderID,voiceMsg.RecvID,(ChatType)message.ChatType,voiceMsg.Param ,true);
+                        msg.recognizedText = voiceMsg.Text;
+                        msg.audioDuration = voiceMsg.Duration;
+                        msg.sendTime = (uint)message.CreateTime;
+                        msg.sendStatus = SendStatus.Sended;
+                        messageObj = msg;
+                    }
+                    break;
+                default:
+                    Log.e("unknown message type:"+message.MessageType.ToString());
+                    break;
+            }
+            
+            if (messageObj != null)
+            {
+                messageObj.requestID = message.RequestID;
+                IMClient.Instance.ReceiveMessageListener( messageObj );
+            }
+        }
+
     }
 
     public void OnRecvNewMessage(YIMEngine.ChatType chatType,string targetID){
         
     }
 
+    /*录音结束 */
+    public void OnStartSendAudioMessage(ulong iRequestID,  YIMEngine.ErrorCode errorcode,string strText,string strAudioPath,int iDuration){
+        OnSendAudioMessageStatusChange(iRequestID, errorcode,strText,strAudioPath,iDuration,false);
+    }
+
+    /*发送结束 */
     public void OnSendAudioMessageStatus(ulong iRequestID, YIMEngine.ErrorCode errorcode, string strText, string strAudioPath, int iDuration)
     {
-        
+        OnSendAudioMessageStatusChange(iRequestID, errorcode,strText,strAudioPath,iDuration,true);
+    }
+
+    private void OnSendAudioMessageStatusChange(ulong iRequestID, YIMEngine.ErrorCode errorcode, string strText, string strAudioPath, int iDuration,bool isFinish){
+        MessageCallbackObject callbackObj=null;
+        bool finded = messageCallbackQueue.TryGetValue(iRequestID, out callbackObj);
+        if( finded ){
+            if( callbackObj != null && callbackObj.callback != null ){
+                
+                Action<YouMe.ErrorCode, AudioMessage> call = (Action<YouMe.ErrorCode, AudioMessage>) callbackObj.callback;
+                var msg = (AudioMessage) callbackObj.message;
+                msg.recognizedText = strText;
+                msg.audioFilePath = strAudioPath;
+                msg.audioDuration = iDuration;
+                if(!isFinish){
+                    msg.sendTime = TimeUtil.ConvertToTimestamp(System.DateTime.Now);
+                }
+                if (errorcode == YIMEngine.ErrorCode.Success)
+                {
+                    msg.sendStatus = isFinish ? SendStatus.Sended : SendStatus.Sending;
+                    if(isFinish){
+                        msg.downloadStatus = MessageDownloadStatus.DOWNLOADED;
+                    }
+                }else{
+                    msg.sendStatus = SendStatus.Fail;
+                }
+                msg.isReceiveFromServer = false;
+                call(Conv.ErrorCodeConvert(errorcode),msg);
+    
+            }
+            messageCallbackQueue.Remove(iRequestID);
+        }
     }
 
     //获取消息历史纪录回调
@@ -132,11 +256,6 @@ public class IMInternaelManager:
     {
        
     }
-    public void OnStartSendAudioMessage(ulong iRequestID,  YIMEngine.ErrorCode errorcode,string strText,string strAudioPath,int iDuration){
-        
-    }
-
-   
 
     #endregion
 
@@ -162,6 +281,19 @@ public class IMInternaelManager:
     public void OnDownload(ulong iRequestID, YIMEngine.ErrorCode errorcode, string strSavePath)
     {
         
+        Action<YouMe.ErrorCode , string > callbackObj=null;
+        bool finded = downloadCallbackQueue.TryGetValue(iRequestID, out callbackObj);
+        if (finded)
+        {
+            if( callbackObj!=null ){
+                try{
+                    callbackObj(Conv.ErrorCodeConvert(errorcode),strSavePath);
+                }catch(Exception e){
+                    Log.e("OnDownload error:"+e.ToString());
+                }
+            }
+            downloadCallbackQueue.Remove(iRequestID);
+        }
     }
     #endregion
 
@@ -196,4 +328,15 @@ public class IMInternaelManager:
         
     }
     #endregion
+}
+
+public class MessageCallbackObject{
+    public object callback;
+    public IMMessage message;
+    public MessageType msgType;
+    public MessageCallbackObject(IMMessage msg,MessageType msgType,object call){
+        this.callback = call;
+        this.message = msg;
+        this.msgType = msgType;
+    }
 }

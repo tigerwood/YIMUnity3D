@@ -29,10 +29,8 @@ namespace YouMe
         public Action<IConnectEvent> ConnectListener{set;get;}
         public Action<ChannelEvent> ChannelEventListener{set;get;}
         public Action<IMMessage> ReceiveMessageListener{get;set; }
-        // public Action<ErrorCode,IMMessage> SendMessageListener{get;set; }
-        public Action<ErrorCode,AudioMessage> StartRecordAudioListener{get;set; }
-        public Action<ErrorCode,AudioMessage> StartSendAudioListener{get;set; }
-        public Action<ErrorCode,AudioMessage> FinishSendAudioListener{get;set; }
+
+        private AudioMessage lastRecordAudioMessage;
 
         public IClient Initialize(string appKey, string secretKey, ServerZone zone = ServerZone.China)
         {
@@ -134,13 +132,24 @@ namespace YouMe
             JoinMultiChannel(channel);
         }
 
+        /// <summary>
+        /// 发送文本消息
+        /// </summary>
+        /// <param name="reciverID">接收者id，私聊就用用户id，频道聊天就用频道id</param>
+        /// <param name="chatType">私聊消息还是频道消息</param>
+        /// <param name="msgContent">文本消息内容</param>
+        /// <param name="onSendCallBack">消息发送结果的回调通知</param>
+        /// <returns>返回 TextMessage 实例</returns>
         public TextMessage SendTextMessage(string reciverID,ChatType chatType, string msgContent ,Action<ErrorCode,TextMessage> onSendCallBack){
             ulong reqID = 0;
             YIMEngine.ErrorCode code = 0;
             code = IMAPI.Instance().SendTextMessage(reciverID, (YIMEngine.ChatType)chatType, msgContent, ref reqID);
-            var msg = new TextMessage(reciverID,chatType,msgContent,true);
+            var msg = new TextMessage(GetCurrentUserID().UserID,reciverID,chatType,msgContent,false);
             if(code == YIMEngine.ErrorCode.Success){
                 msg.sendStatus = SendStatus.Sending;
+                msg.requestID = reqID;
+                MessageCallbackObject callbackObj = new MessageCallbackObject(msg,MessageType.TEXT,onSendCallBack);
+                IMInternaelManager.Instance.AddMessageCallback(reqID, callbackObj);
             }else{
                 msg.sendStatus = SendStatus.Fail;
                 if(onSendCallBack!=null){
@@ -150,10 +159,16 @@ namespace YouMe
             return msg;
         }
 
-        /**
-        if return null，启动录音是失败的
-         */
-        public AudioMessage StartRecordAudio(string reciverID,ChatType chatType,string extraMsg,bool recognizeText,Action<IMRecordAudioEvent,ErrorCode,AudioMessage> recordCallback){
+        /// <summary>
+        /// 启动录音
+        /// </summary>
+        /// <param name="reciverID">接收者id，私聊就用用户id，频道聊天就用频道id</param>
+        /// <param name="chatType">私聊消息还是频道消息</param>
+        /// <param name="extraMsg">附带自定义文本消息内容</param>
+        /// <param name="recognizeText">是否开启语音转文字识别功能</param>
+        /// <param name="callback">语音消息发送回调通知，会通知多次，通过AudioMessage的sendStatus属性可以判断是哪个状态的回调</param>
+        /// <returns></returns>
+        public AudioMessage StartRecordAudio(string reciverID,ChatType chatType,string extraMsg,bool recognizeText,Action<ErrorCode,AudioMessage> callback){
             ulong reqID = 0;
             YIMEngine.ErrorCode code = 0;
             if(recognizeText){
@@ -161,17 +176,56 @@ namespace YouMe
             }else{
                 code = IMAPI.Instance().SendOnlyAudioMessage(reciverID, (YIMEngine.ChatType)chatType, ref reqID);
             }
+            var msg = new AudioMessage(GetCurrentUserID().UserID,reciverID,chatType,extraMsg,false);
             if(code == YIMEngine.ErrorCode.Success){
-                var msg = new AudioMessage(reciverID,chatType,extraMsg,recognizeText,true);
-                return msg;
+                msg.requestID = reqID;
+                msg.sendStatus = SendStatus.NotStartSend;
+                lastRecordAudioMessage = msg;
+                MessageCallbackObject callbackObj = new MessageCallbackObject(msg,MessageType.AUDIO,callback);
+                IMInternaelManager.Instance.AddMessageCallback(reqID, callbackObj);
+            }else{
+                msg.sendStatus = SendStatus.Fail;
+                Log.e("Start Record Fail! code:"+code.ToString());
+                if( callback!=null ){
+                    callback(Conv.ErrorCodeConvert(code),msg);
+                }
             }
-            Log.e("StartRecordAudio fail error:"+code.ToString());
-            return null;
+            return msg;
         }
 
-        public bool StopRecordAndSendAudio(AudioMessage audioMsg){
-            
-            return false;
+        /// <summary>
+        /// 结束录音并发送语音消息
+        /// </summary>
+        /// <returns>false表示启动发送失败，true表示启动发送成功</returns>
+        public bool StopRecordAndSendAudio(){
+            if(lastRecordAudioMessage==null){
+                return false;
+            }
+            var audioMsg = lastRecordAudioMessage;
+            if(audioMsg.sendStatus == SendStatus.Fail){
+                Log.e("StopRecordAndSendAudio Fail! SendStatus is Fail!");
+                lastRecordAudioMessage = null;
+                return false;
+            }
+            YIMEngine.ErrorCode code = IMAPI.Instance().StopAudioMessage(audioMsg.extraParam);
+            lastRecordAudioMessage = null;
+            if( code==YIMEngine.ErrorCode.Success ){
+                return true;
+            }else{
+                Log.e("StopRecordAndSendAudio Fail! code:"+code.ToString());
+                return false;
+            }
+        }
+
+        public void DownloadFile(ulong requestID,string targetFilePath,Action<YouMe.ErrorCode , string > downloadCallback){
+            YIMEngine.ErrorCode code = IMAPI.Instance().DownloadAudioFile(requestID,targetFilePath);
+            bool ret = false;
+            if( code == YIMEngine.ErrorCode.Success ){
+                ret = IMInternaelManager.Instance.AddDownloadCallback( requestID, downloadCallback );
+            }
+            if(!ret && downloadCallback!=null){
+                downloadCallback(YouMe.ErrorCode.START_DOWNLOAD_FAIL,"");
+            }
         }
     }
 }

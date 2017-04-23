@@ -7,11 +7,11 @@ public class IMTest : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-        IMClient.Instance.Initialize("appkey", "secretkey", ServerZone.China);
-        IMClient.Instance.ConnectListener = OnConnect;
-        IMClient.Instance.ChannelEventListener = OnJoinChannel;
-        IMClient.Instance.ReceiveMessageListener = OnReceiveMessage;
-        IMClient.Instance.FinishSendAudioListener = OnFinishSendAudio;
+        IM = IMClient.Instance;
+        IM.Initialize("appkey", "secretkey", ServerZone.China);
+        IM.ConnectListener = OnConnect;
+        IM.ChannelEventListener = OnJoinChannel;
+        IM.ReceiveMessageListener = OnReceiveMessage;
 
     }
 
@@ -39,7 +39,13 @@ public class IMTest : MonoBehaviour {
 	}
 
 	void SendTextMessage(){
-        // TextMessage msg = IMClient.Instance.SendTextMessage("userid", ChatType.Private, "hello cat");
+        TextMessage msg = IMClient.Instance.SendTextMessage("userid", ChatType.PrivateChat, "hello cat",(code,message)=>{
+            if(code == ErrorCode.SUCCESS){
+                Log.e("发送文本消息成功："+message.content);
+            }else{
+                Log.e("发送文本消息失败："+message.content);
+            }
+        });
     }
 
 	void OnReceiveMessage(IMMessage msg){
@@ -47,20 +53,31 @@ public class IMTest : MonoBehaviour {
             var audioMsg = (AudioMessage)msg;
             ShowMsg(audioMsg);
             audioMsg.Download((code,audiMsgObj)=>{
-                audiMsgObj.PlayAudioInQueue();
+                audiMsgObj.PlayAudio(null);
             });
         }else if(msg.messageType == MessageType.TEXT){
             ShowMsg(msg);
         }
 	}
 
-
     public void StartRecord(){
-        // IMClient.Instance.StartRecordAudio("userid",ChatType.Private);
+        var recordAudioMsg = IMClient.Instance.StartRecordAudio("userid",ChatType.PrivateChat,"",true,(code,audioMessage)=>{
+            if(code == ErrorCode.SUCCESS){
+                if(audioMessage.sendStatus == SendStatus.Sending){
+                    Log.e("录音完成，发送语音消息中...");
+                    audioMessage.PlayAudio(null);//可以播放了
+                }else if(audioMessage.sendStatus == SendStatus.Sended){
+                    Log.e("语音消息发送成功。");
+                    audioMessage.PlayAudio(null);//也可以播放
+                }
+            }else{
+                Log.e("启动录音失败，错误码："+code.ToString());
+            }
+        });
     }
 
     public void StopRecordAndSend(){
-        // IMClient.Instance.StopRecordAndSendAudio("");
+        IMClient.Instance.StopRecordAndSendAudio();
     }
     
 
