@@ -37,7 +37,7 @@ public class IMInternaelManager:
     private Dictionary<ulong, Action<YouMe.ErrorCode , string >> downloadCallbackQueue = new Dictionary<ulong, Action<YouMe.ErrorCode , string >>(10);
 
     public bool AddMessageCallback(ulong reqID,MessageCallbackObject callback){
-        if (messageCallbackQueue.ContainsKey(reqID))
+        if (!messageCallbackQueue.ContainsKey(reqID))
         {
             messageCallbackQueue.Add(reqID, callback);
         }else{
