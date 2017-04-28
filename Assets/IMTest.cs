@@ -45,6 +45,7 @@ public class IMTest : MonoBehaviour {
     }
 
     public void OnStartRecordVoiceClick(){
+        Log2UI("启动录音");
         IM.StartRecordAudio(userIDInput.text, ChatType.PrivateChat, "",true, (code, audioMsg) =>
         {
             if(audioMsg.sendStatus == SendStatus.Sending){
@@ -64,7 +65,13 @@ public class IMTest : MonoBehaviour {
     }
 	
     public void OnStopRecordAndSendClick(){
-        IMClient.Instance.StopRecordAndSendAudio();
+
+        bool ret = IMClient.Instance.StopRecordAndSendAudio();
+        if(ret){
+            Log2UI("停止录音成功");
+        }else{
+            Log2UI("停止录音失败，不会发送");
+        }
     }
 
 	void OnConnect(IConnectEvent connectEvent){
