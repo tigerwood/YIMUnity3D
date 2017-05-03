@@ -7,7 +7,7 @@ namespace YouMe
         /**
         Base API
          */
-        IClient Initialize(string appKey,string secretKey,ServerZone zone = ServerZone.China);
+        IClient Initialize(string appKey,string secretKey,Config config);
         // void Login(string userID,string token,Action<LoginEvent> callback);
         // void JoinChannel(IChannel channel);
         // void LeaveChannel(IChannel channel);

@@ -42,9 +42,12 @@ namespace YouMe
 
         private AudioMessage lastRecordAudioMessage;
 
-        public IClient Initialize(string appKey, string secretKey, ServerZone zone = ServerZone.China)
+        public IClient Initialize(string appKey, string secretKey, Config config)
         {
-            IMAPI.Instance().SetServerZone((YIMEngine.ServerZone)zone);
+            if (config != null)
+            {
+                IMAPI.Instance().SetServerZone((YIMEngine.ServerZone)config.ServerZone);
+            }
             IMAPI.Instance().Init(appKey, secretKey);
             return this;
         }
