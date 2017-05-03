@@ -58,13 +58,13 @@ public class AudioMessage:IMMessage{
         }
     }
 
-    public void PlayAudio(Action<AudioMessage> OnPlayCompletion){
+    public void Play(Action<AudioMessage> OnPlayCompletion){
         if( !string.IsNullOrEmpty( audioFilePath ) ){
             YIMEngine.IMAPI.Instance().StartPlayAudio(audioFilePath);
         }
         // TODO: ADD callback
     }
-    public void PlayAudioInQueue(){}
+    public void PlayInQueue(){}
 
     public void Download(Action<ErrorCode,AudioMessage> downloadCallback){
         Download(GetUniqAudioPath(),downloadCallback);

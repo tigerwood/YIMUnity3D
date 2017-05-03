@@ -7,9 +7,11 @@ namespace YouMe
         KICKED,
         OFF_LINE //掉线
     }
+    
     public interface IConnectEvent{
         ErrorCode Code { get; }
         ConnectEventType EventType{ get; }
         string UserID{ get; }
     }
+
 }

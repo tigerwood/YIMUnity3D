@@ -19,6 +19,8 @@ namespace YouMe
 
         private IMClient(){
             IMManager = IMInternaelManager.Instance;
+            ConnectListener = OnConnect;
+            ChannelEventListener = OnChannelEvent;
         }
 
         public static string FAKE_PAPSSWORD = "123456";
@@ -30,6 +32,14 @@ namespace YouMe
         public Action<ChannelEvent> ChannelEventListener{set;get;}
         public Action<IMMessage> ReceiveMessageListener{get;set; }
 
+        private Action<LoginEvent> loginCallback;
+        private Action<LogoutEvent> logoutCallback;
+        private Action<KickOffEvent> kickOffCallback;
+        private Action<DisconnectEvent> disconnectCallback;
+
+        private Action<ChannelEvent> joinChannelCallback;
+        private Action<ChannelEvent> leaveChannelCallback;
+
         private AudioMessage lastRecordAudioMessage;
 
         public IClient Initialize(string appKey, string secretKey, ServerZone zone = ServerZone.China)
@@ -39,24 +49,39 @@ namespace YouMe
             return this;
         }
 
-        public void Connect(string userID,string token="")
+        public void Login(string userID,string token,Action<LoginEvent> callback)
         {
             // login 
+            loginCallback = callback;
             YIMEngine.ErrorCode code = IMAPI.Instance().Login(userID, FAKE_PAPSSWORD, token);
             if( code!=YIMEngine.ErrorCode.Success && ConnectListener != null ){
                 IMConnectEvent e = new IMConnectEvent(Conv.ErrorCodeConvert(code),ConnectEventType.CONNECT_FAIL,userID);
                 ConnectListener( e );
             }
+            
         }
 
-        public void Disconnect()
+        public void SetReceiveMessageListener(Action<IMMessage> listener){
+            ReceiveMessageListener = listener;
+        }
+
+        public void Logout(Action<LogoutEvent> callback)
         {
             // logout
+            logoutCallback = callback;
             YIMEngine.ErrorCode code = IMAPI.Instance().Logout();
             if( code!=YIMEngine.ErrorCode.Success && ConnectListener != null ){
                 IMConnectEvent e = new IMConnectEvent(Conv.ErrorCodeConvert(code),ConnectEventType.DISCONNECTED,"");
                 ConnectListener( e );
             }
+        }
+
+        public void SetKickOffListener(Action<KickOffEvent> callback){
+            kickOffCallback = callback;
+        }
+
+        public void SetDisconnectListener(Action<DisconnectEvent> callback) {
+            disconnectCallback = callback;
         }
 
         public IMChannel[] GetCurrentChannels()
@@ -74,16 +99,18 @@ namespace YouMe
             return IMManager.LastLoginUser;
         }
 
-        public void JoinChannel(IMChannel channel)
+        public void JoinChannel(IMChannel channel,Action<ChannelEvent> callback)
         {
+            joinChannelCallback = callback;
             var code = IMAPI.Instance().JoinChatRoom( channel.ChannelID );
             if( code!=YIMEngine.ErrorCode.Success && ChannelEventListener!=null ){
                 ChannelEventListener(new ChannelEvent( Conv.ErrorCodeConvert(code),ChannelEventType.JOIN_FAIL,channel.ChannelID ));
             }
         }
 
-        public void JoinMultiChannel(IMChannel[] channels)
+        public void JoinMultiChannel(IMChannel[] channels,Action<ChannelEvent> callback)
         {
+            joinChannelCallback = callback;
             for (int i = 0; i < channels.Length;i++){
                 var code = IMAPI.Instance().JoinChatRoom(channels[i].ChannelID);
                 if( code!=YIMEngine.ErrorCode.Success && ChannelEventListener!=null ){
@@ -92,13 +119,15 @@ namespace YouMe
             }
         }
 
-        public void LeaveAllChannel()
+        public void LeaveAllChannel(Action<ChannelEvent> callback)
         {
+            leaveChannelCallback = callback;
             throw new NotImplementedException();
         }
 
-        public void LeaveChannel(IMChannel channel)
+        public void LeaveChannel(IMChannel channel,Action<ChannelEvent> callback)
         {
+            leaveChannelCallback = callback;
             var code = IMAPI.Instance().LeaveChatRoom( channel.ChannelID );
             if( code!=YIMEngine.ErrorCode.Success && ChannelEventListener!=null ){
                 ChannelEventListener(new ChannelEvent( Conv.ErrorCodeConvert(code),ChannelEventType.LEAVE_FAIL,channel.ChannelID ));
@@ -126,10 +155,10 @@ namespace YouMe
             return this;
         }
 
-        public void SwitchToChannels(IMChannel[] channel)
+        public void SwitchToChannels(IMChannel[] channel,Action<ChannelEvent> leaveCallback,Action<ChannelEvent> joinCallback)
         {
-            LeaveAllChannel();
-            JoinMultiChannel(channel);
+            LeaveAllChannel(leaveCallback);
+            JoinMultiChannel(channel,joinCallback);
         }
 
         /// <summary>
@@ -227,5 +256,41 @@ namespace YouMe
                 downloadCallback(YouMe.ErrorCode.START_DOWNLOAD_FAIL,"");
             }
         }
+
+        private void OnConnect(IConnectEvent connectEvent)
+        {
+            switch ( connectEvent.EventType ){
+                case ConnectEventType.CONNECTED: 
+                    if( loginCallback != null ) loginCallback(new LoginEvent(connectEvent.Code,connectEvent.UserID));
+                    break;
+                case ConnectEventType.CONNECT_FAIL:
+                     if( loginCallback != null ) loginCallback(new LoginEvent(connectEvent.Code,connectEvent.UserID));
+                    break;
+                case ConnectEventType.OFF_LINE:
+                    if( disconnectCallback != null ) disconnectCallback(new DisconnectEvent(connectEvent.Code,connectEvent.UserID));
+                    break;
+                case ConnectEventType.DISCONNECTED:
+                    if( logoutCallback != null ) logoutCallback(new LogoutEvent(connectEvent.Code,connectEvent.UserID));
+                    break;
+                case ConnectEventType.KICKED:
+                    if( kickOffCallback != null ) kickOffCallback(new KickOffEvent(connectEvent.Code,connectEvent.UserID));
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        void OnChannelEvent(ChannelEvent channelEvent){
+            switch(channelEvent.EventType){
+                case ChannelEventType.JOIN_SUCCESS:
+                case ChannelEventType.JOIN_FAIL:
+                    joinChannelCallback(channelEvent);
+                    break;
+                case ChannelEventType.LEAVE_FAIL:
+                case ChannelEventType.LEAVE_SUCCESS:
+                    leaveChannelCallback(channelEvent);
+                    break;
+            }
+	    }
     }
 }

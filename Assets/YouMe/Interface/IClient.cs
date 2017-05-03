@@ -8,21 +8,18 @@ namespace YouMe
         Base API
          */
         IClient Initialize(string appKey,string secretKey,ServerZone zone = ServerZone.China);
-        void Connect(string userID,string token="");
+        // void Login(string userID,string token,Action<LoginEvent> callback);
         // void JoinChannel(IChannel channel);
         // void LeaveChannel(IChannel channel);
-
-        Action<IConnectEvent> ConnectListener{set;get;}
-        Action<ChannelEvent> ChannelEventListener{set;get;}
 
         /**
         Extention API
          */
         void ReConnect();
         // void JoinMultiChannel(IChannel[] channel);
-        void LeaveAllChannel();
+        // void LeaveAllChannel();
         // void SwitchChannel(IChannel channel);
-        void Disconnect();
+        // void Logout();
 
         /**
         Config API
