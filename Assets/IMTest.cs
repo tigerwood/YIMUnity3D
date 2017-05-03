@@ -29,9 +29,13 @@ public class IMTest : MonoBehaviour {
         // 注册接收新消息的方法
         IM.SetReceiveMessageListener( OnReceiveMessage );
         // 断线事件监听
-        IM.SetDisconnectListener(null);
+        IM.SetDisconnectListener((disconnectEvt)=>{
+            Debug.Log("断线了");
+        });
         // 被踢下线事件监听
-        IM.SetKickOffListener(null);
+        IM.SetKickOffListener((kickoffEvt)=>{
+            Debug.Log("被踢下线了");
+        });
 
         //开始登陆
         IM.Login(userIDInput.text,"",(evt)=>{

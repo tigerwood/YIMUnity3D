@@ -42,7 +42,14 @@ namespace YouMe
 
         private AudioMessage lastRecordAudioMessage;
 
-        public IClient Initialize(string appKey, string secretKey, Config config)
+        /// <summary>
+        /// 设置配置信息
+        /// </summary>
+        /// <param name="appKey">游密官方分配的APP唯一标识，在www.youme.im注册后可以自助获取</param>
+        /// <param name="secretKey">游密官方分配的接入密钥，和appkey配对使用，在www.youme.im注册后可以自助获取</param>
+        /// <param name="config">SDK配置对象，可以通过该对象的参数设置SDK的可选参数，比如服务器区域、日志级别、方言识别</param>
+        /// <returns>IMClient对象</returns>
+        public IMClient Initialize(string appKey, string secretKey, Config config)
         {
             if (config != null)
             {
@@ -52,7 +59,13 @@ namespace YouMe
             return this;
         }
 
-        public void Login(string userID,string token,Action<LoginEvent> callback)
+        /// <summary>
+        /// 登录IM系统。成功登录IM系统后就可以进行私聊消息的收发，以及进出聊天频道，进行频道消息的收发。
+        /// </summary>
+        /// <param name="userID">用户ID或者游戏角色ID，唯一标识一个用户在应用里的身份</param>
+        /// <param name="token">使用服务器token验证模式时使用该参数，否则使用空字符串""即可</param>
+        /// <param name="callback">登录结果的回调通知，在此回调里判读登录是否成功</param>
+        public void Login(string userID, string token, Action<LoginEvent> callback)
         {
             // login 
             loginCallback = callback;
@@ -79,10 +92,28 @@ namespace YouMe
             }
         }
 
+        /// <summary>
+        /// 被踢下线事件监听器，在同时登录多个相同userID的情况下，先登录的帐号会被后登录的帐号踢下线。
+        /// </summary>
+        /// <param name="callback">
+        /// 回调绑定
+        /// KickOffEvent：响应结果对象
+        ///     KickOffEvent.UserID  用户ID
+        ///     KickOffEvent.Code    事件结果，断线通知的情况下始终为SUCCESS
+        /// </param>
         public void SetKickOffListener(Action<KickOffEvent> callback){
             kickOffCallback = callback;
         }
 
+        /// <summary>
+        /// 断线事件监听器，一般发生在网络异常的时候。
+        /// </summary>
+        /// <param name="callback">
+        /// 回调绑定
+        /// DisconnectEvent：响应结果对象
+        ///     DisconnectEvent.UserID  用户ID
+        ///     DisconnectEvent.Code    事件结果，断线通知的情况下始终为SUCCESS
+        /// </param>
         public void SetDisconnectListener(Action<DisconnectEvent> callback) {
             disconnectCallback = callback;
         }
