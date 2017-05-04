@@ -2,13 +2,22 @@
 using System;
 
 namespace YouMe{
-    public class IMConnectEvent : IConnectEvent
+    
+    public enum ConnectEventType{
+        CONNECTED,
+        DISCONNECTED,
+        CONNECT_FAIL,
+        KICKED,
+        OFF_LINE //掉线
+    }
+
+    public class IMConnectEvent
     {
-        private ErrorCode _code;
+        private StatusCode _code;
         private ConnectEventType _type;
         private string _userID;
 
-        public ErrorCode Code { 
+        public StatusCode Code { 
             get{
                 return _code;
             } 
@@ -21,7 +30,7 @@ namespace YouMe{
             } 
         }
 
-        public IMConnectEvent(ErrorCode code,ConnectEventType type,string userID){
+        public IMConnectEvent(StatusCode code,ConnectEventType type,string userID){
             _code = code;
             _type = type;
             _userID = userID;
@@ -30,41 +39,41 @@ namespace YouMe{
     }
 
     public class ConnectEvent{
-        private ErrorCode _code;
+        private StatusCode _code;
         private string _userID;
         public string UserID{
             get{
                 return _userID;
             } 
         }
-        public ErrorCode Code { 
+        public StatusCode Code { 
             get{
                 return _code;
             } 
         }
-         public ConnectEvent(ErrorCode code,string userID){
+         public ConnectEvent(StatusCode code,string userID){
             _code = code;
             _userID = userID;
         }
     }
 
     public class LoginEvent:ConnectEvent{
-        public LoginEvent(ErrorCode code,string userID):base(code,userID){
+        public LoginEvent(StatusCode code,string userID):base(code,userID){
         }
     }
 
     public class LogoutEvent:ConnectEvent{
-        public LogoutEvent(ErrorCode code,string userID):base(code,userID){
+        public LogoutEvent(StatusCode code,string userID):base(code,userID){
         }
     }
 
     public class KickOffEvent:ConnectEvent{
-        public KickOffEvent(ErrorCode code,string userID):base(code,userID){
+        public KickOffEvent(StatusCode code,string userID):base(code,userID){
         }
     }
     
     public class DisconnectEvent:ConnectEvent{
-        public DisconnectEvent(ErrorCode code,string userID):base(code,userID){
+        public DisconnectEvent(StatusCode code,string userID):base(code,userID){
         }
     }
 }

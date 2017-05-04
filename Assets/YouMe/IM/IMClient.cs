@@ -18,17 +18,17 @@ namespace YouMe
         }
 
         private IMClient(){
-            IMManager = IMInternaelManager.Instance;
+            IMManager = IMInternalManager.Instance;
             ConnectListener = OnConnect;
             ChannelEventListener = OnChannelEvent;
         }
 
         public static string FAKE_PAPSSWORD = "123456";
 
-        public IMInternaelManager IMManager;
+        public IMInternalManager IMManager;
 
         // event 
-        public Action<IConnectEvent> ConnectListener{set;get;}
+        public Action<IMConnectEvent> ConnectListener{set;get;}
         public Action<ChannelEvent> ChannelEventListener{set;get;}
         public Action<IMMessage> ReceiveMessageListener{get;set; }
 
@@ -173,7 +173,7 @@ namespace YouMe
             throw new NotImplementedException();
         }
 
-        public IClient SetDebug(bool isDebug)
+        public IMClient SetDebug(bool isDebug)
         {
             if(isDebug){
                 IMAPI.SetMode(0);
@@ -183,7 +183,7 @@ namespace YouMe
             return this;
         }
 
-        public IClient SetLogLevel(LogLevel logLevel)
+        public IMClient SetLogLevel(LogLevel logLevel)
         {
 
             return this;
@@ -203,7 +203,7 @@ namespace YouMe
         /// <param name="msgContent">文本消息内容</param>
         /// <param name="onSendCallBack">消息发送结果的回调通知</param>
         /// <returns>返回 TextMessage 实例</returns>
-        public TextMessage SendTextMessage(string reciverID,ChatType chatType, string msgContent ,Action<ErrorCode,TextMessage> onSendCallBack){
+        public TextMessage SendTextMessage(string reciverID,ChatType chatType, string msgContent ,Action<StatusCode,TextMessage> onSendCallBack){
             ulong reqID = 0;
             YIMEngine.ErrorCode code = 0;
             code = IMAPI.Instance().SendTextMessage(reciverID, (YIMEngine.ChatType)chatType, msgContent, ref reqID);
@@ -211,8 +211,8 @@ namespace YouMe
             if(code == YIMEngine.ErrorCode.Success){
                 msg.sendStatus = SendStatus.Sending;
                 msg.requestID = reqID;
-                MessageCallbackObject callbackObj = new MessageCallbackObject(msg,MessageType.TEXT,onSendCallBack);
-                IMInternaelManager.Instance.AddMessageCallback(reqID, callbackObj);
+                MessageCallbackObject callbackObj = new MessageCallbackObject(msg,MessageBodyType.TXT,onSendCallBack);
+                IMInternalManager.Instance.AddMessageCallback(reqID, callbackObj);
             }else{
                 msg.sendStatus = SendStatus.Fail;
                 if(onSendCallBack!=null){
@@ -231,7 +231,7 @@ namespace YouMe
         /// <param name="recognizeText">是否开启语音转文字识别功能</param>
         /// <param name="callback">语音消息发送回调通知，会通知多次，通过AudioMessage的sendStatus属性可以判断是哪个状态的回调</param>
         /// <returns></returns>
-        public AudioMessage StartRecordAudio(string reciverID,ChatType chatType,string extraMsg,bool recognizeText,Action<ErrorCode,AudioMessage> callback){
+        public AudioMessage StartRecordAudio(string reciverID,ChatType chatType,string extraMsg,bool recognizeText,Action<StatusCode,AudioMessage> callback){
             ulong reqID = 0;
             YIMEngine.ErrorCode code = 0;
             if(recognizeText){
@@ -244,8 +244,8 @@ namespace YouMe
                 msg.requestID = reqID;
                 msg.sendStatus = SendStatus.NotStartSend;
                 lastRecordAudioMessage = msg;
-                MessageCallbackObject callbackObj = new MessageCallbackObject(msg,MessageType.AUDIO,callback);
-                IMInternaelManager.Instance.AddMessageCallback(reqID, callbackObj);
+                MessageCallbackObject callbackObj = new MessageCallbackObject(msg,MessageBodyType.Voice,callback);
+                IMInternalManager.Instance.AddMessageCallback(reqID, callbackObj);
             }else{
                 msg.sendStatus = SendStatus.Fail;
                 Log.e("Start Record Fail! code:"+code.ToString());
@@ -280,18 +280,18 @@ namespace YouMe
             }
         }
 
-        public void DownloadFile(ulong requestID,string targetFilePath,Action<YouMe.ErrorCode , string > downloadCallback){
+        public void DownloadFile(ulong requestID,string targetFilePath,Action<YouMe.StatusCode , string > downloadCallback){
             YIMEngine.ErrorCode code = IMAPI.Instance().DownloadAudioFile(requestID,targetFilePath);
             bool ret = false;
             if( code == YIMEngine.ErrorCode.Success ){
-                ret = IMInternaelManager.Instance.AddDownloadCallback( requestID, downloadCallback );
+                ret = IMInternalManager.Instance.AddDownloadCallback( requestID, downloadCallback );
             }
             if(!ret && downloadCallback!=null){
-                downloadCallback(YouMe.ErrorCode.START_DOWNLOAD_FAIL,"");
+                downloadCallback(YouMe.StatusCode.START_DOWNLOAD_FAIL,"");
             }
         }
 
-        private void OnConnect(IConnectEvent connectEvent)
+        private void OnConnect(IMConnectEvent connectEvent)
         {
             switch ( connectEvent.EventType ){
                 case ConnectEventType.CONNECTED: 

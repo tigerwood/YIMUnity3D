@@ -4,7 +4,7 @@ using UnityEngine;
 using YIMEngine;
 using YouMe;
 
-public class IMInternaelManager:
+public class IMInternalManager:
     YIMEngine.LoginListen,
     YIMEngine.MessageListen,
     YIMEngine.ChatRoomListen,
@@ -13,14 +13,14 @@ public class IMInternaelManager:
     YIMEngine.AudioPlayListen,
     YIMEngine.LocationListen {
 
-    private static IMInternaelManager _instance;
-    public static IMInternaelManager Instance
+    private static IMInternalManager _instance;
+    public static IMInternalManager Instance
     {
         get
         {
             if (_instance == null)
             {
-                _instance = new IMInternaelManager();
+                _instance = new IMInternalManager();
             }
             return _instance;
         }
@@ -34,7 +34,7 @@ public class IMInternaelManager:
     }
 
     private Dictionary<ulong, MessageCallbackObject> messageCallbackQueue = new Dictionary<ulong, MessageCallbackObject>(10);
-    private Dictionary<ulong, Action<YouMe.ErrorCode , string >> downloadCallbackQueue = new Dictionary<ulong, Action<YouMe.ErrorCode , string >>(10);
+    private Dictionary<ulong, Action<YouMe.StatusCode , string >> downloadCallbackQueue = new Dictionary<ulong, Action<YouMe.StatusCode , string >>(10);
 
     public bool AddMessageCallback(ulong reqID,MessageCallbackObject callback){
         if (!messageCallbackQueue.ContainsKey(reqID))
@@ -47,7 +47,7 @@ public class IMInternaelManager:
         return true;
     }
 
-    public bool AddDownloadCallback(ulong reqID,Action<YouMe.ErrorCode , string > callback){
+    public bool AddDownloadCallback(ulong reqID,Action<YouMe.StatusCode , string > callback){
         if(!downloadCallbackQueue.ContainsKey(reqID)){
             downloadCallbackQueue.Add(reqID, callback);
         }else{
@@ -57,7 +57,7 @@ public class IMInternaelManager:
         return true;
     }
 
-    private IMInternaelManager(){
+    private IMInternalManager(){
         var youmeObj = new GameObject("__YIMGameObjectV2__");
         GameObject.DontDestroyOnLoad(youmeObj);
         youmeObj.hideFlags = HideFlags.DontSave;
@@ -115,7 +115,7 @@ public class IMInternaelManager:
     public void OnLogout()
     {
        if( IMClient.Instance.ConnectListener!=null ){
-            IMConnectEvent e = new IMConnectEvent(YouMe.ErrorCode.SUCCESS,ConnectEventType.DISCONNECTED,"");
+            IMConnectEvent e = new IMConnectEvent(YouMe.StatusCode.Success,ConnectEventType.DISCONNECTED,"");
             IMClient.Instance.ConnectListener(e);
         }
     }
@@ -133,8 +133,8 @@ public class IMInternaelManager:
             if( callbackObj != null && callbackObj.callback != null ){
                 try{
                     switch(callbackObj.msgType){
-                        case MessageType.TEXT:
-                            Action<YouMe.ErrorCode, TextMessage> call = (Action<YouMe.ErrorCode, TextMessage>)callbackObj.callback;
+                        case MessageBodyType.TXT:
+                            Action<YouMe.StatusCode, TextMessage> call = (Action<YouMe.StatusCode, TextMessage>)callbackObj.callback;
                             var msg = (TextMessage)callbackObj.message;
                             msg.sendTime = TimeUtil.ConvertToTimestamp(System.DateTime.Now);
                             if (errorcode == YIMEngine.ErrorCode.Success)
@@ -219,7 +219,7 @@ public class IMInternaelManager:
         if( finded ){
             if( callbackObj != null && callbackObj.callback != null ){
                 
-                Action<YouMe.ErrorCode, AudioMessage> call = (Action<YouMe.ErrorCode, AudioMessage>) callbackObj.callback;
+                Action<YouMe.StatusCode, AudioMessage> call = (Action<YouMe.StatusCode, AudioMessage>) callbackObj.callback;
                 var msg = (AudioMessage) callbackObj.message;
                 msg.recognizedText = strText;
                 msg.audioFilePath = strAudioPath;
@@ -281,7 +281,7 @@ public class IMInternaelManager:
     public void OnDownload(ulong iRequestID, YIMEngine.ErrorCode errorcode, string strSavePath)
     {
         
-        Action<YouMe.ErrorCode , string > callbackObj=null;
+        Action<YouMe.StatusCode , string > callbackObj=null;
         bool finded = downloadCallbackQueue.TryGetValue(iRequestID, out callbackObj);
         if (finded)
         {
@@ -333,8 +333,8 @@ public class IMInternaelManager:
 public class MessageCallbackObject{
     public object callback;
     public IMMessage message;
-    public MessageType msgType;
-    public MessageCallbackObject(IMMessage msg,MessageType msgType,object call){
+    public MessageBodyType msgType;
+    public MessageCallbackObject(IMMessage msg,MessageBodyType msgType,object call){
         this.callback = call;
         this.message = msg;
         this.msgType = msgType;

@@ -8,11 +8,11 @@ namespace YouMe
     }
     public class ChannelEvent{
 
-        ErrorCode _code;
+        StatusCode _code;
         ChannelEventType _eventType;
         string _channelID;
 
-        public ErrorCode code { get{
+        public StatusCode code { get{
                 return _code;
             } }
         public ChannelEventType EventType{ get{
@@ -22,7 +22,7 @@ namespace YouMe
                 return _channelID;
             } }
 
-        public ChannelEvent(ErrorCode code,ChannelEventType eType,string channelID){
+        public ChannelEvent(StatusCode code,ChannelEventType eType,string channelID){
             _code = code;
             _eventType = eType;
             _channelID = channelID;

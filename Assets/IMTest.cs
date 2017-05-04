@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using YouMe;
+using YIMEngine;
 
 public class IMTest : MonoBehaviour {
 
@@ -39,11 +40,11 @@ public class IMTest : MonoBehaviour {
 
         //开始登陆
         IM.Login(userIDInput.text,"",(evt)=>{
-            if(evt.Code == ErrorCode.SUCCESS){
+            if(evt.Code == StatusCode.Success){
                 userIDInput.interactable = false; loginButton.interactable = false; logoutButton.interactable = true;
                 //进入聊天频道
                 IM.JoinChannel(new IMChannel("5678"),(channelEvt)=>{
-                    if(channelEvt.code == ErrorCode.SUCCESS){
+                    if(channelEvt.code == StatusCode.Success){
                         Log2UI("进入频道:5678 成功");
                     }else{
                         Log2UI("进入频道:5678 失败");
@@ -68,7 +69,7 @@ public class IMTest : MonoBehaviour {
 
     public void OnSendTextMsgClick(){
         var msg = IM.SendTextMessage(userIDInput.text,ChatType.PrivateChat,textMsgInput.text,(code,textMsgObj)=>{
-            if (code == ErrorCode.SUCCESS)
+            if (code == StatusCode.Success)
             {
                 Log2UI("发送：" + textMsgObj.content + " 成功");
             }else{
@@ -79,19 +80,19 @@ public class IMTest : MonoBehaviour {
 
     public void OnStartRecordVoiceClick(){
         Log2UI("启动录音");
-        var msg = IM.StartRecordAudio(userIDInput.text, ChatType.PrivateChat, "",true, (code, audioMsg) =>
+        var msg = IM.StartRecordAudio(userIDInput.text, ChatType.PrivateChat, "",false, (code, audioMsg) =>
         {
             if(audioMsg.sendStatus == SendStatus.Sending){
                 Log2UI("语音发送中");
                 Log2UI("开始播放自己发送的语音");
-                audioMsg.Play((audiomsg)=>{
-                    Log2UI("完成播放自己发送的语音");
-                });
+                // audioMsg.Play((audiomsg)=>{
+                //     Log2UI("完成播放自己发送的语音");
+                // });
             }else if(audioMsg.sendStatus == SendStatus.Sended){
                 Log2UI("语音发送成功");
             }else if(audioMsg.sendStatus == SendStatus.Fail){
                 Log2UI("语音发送失败");
-            }else if (code != ErrorCode.SUCCESS) { 
+            }else if (code != StatusCode.Success) { 
                  Log2UI("启动录音失败");
             }
         });
@@ -108,7 +109,7 @@ public class IMTest : MonoBehaviour {
     }
 
 	void OnReceiveMessage(IMMessage msg){
-		if(msg.messageType == MessageType.AUDIO){
+		if(msg.messageType == MessageBodyType.Voice){
             var audioMsg = (AudioMessage)msg;
             ShowMsg(audioMsg);
             Log2UI("下载语音文件");
@@ -116,13 +117,13 @@ public class IMTest : MonoBehaviour {
                 Log2UI("播放接收到的语音消息");
                 audiMsgObj.Play( null );
             });
-        }else if(msg.messageType == MessageType.TEXT){
+        }else if(msg.messageType == MessageBodyType.TXT){
             ShowMsg(msg);
         }
 	}
 
 	void ShowMsg(IMMessage msg){
-        if (msg.messageType == MessageType.TEXT)
+        if (msg.messageType == MessageBodyType.TXT)
         {
             recvMsgText.text = "收到文本："+((TextMessage)msg).content + "\n" + recvMsgText.text;
         }else{
